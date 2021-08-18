@@ -21,7 +21,7 @@ namespace Jawfixer
 
         static List<methodRef> refs = new List<methodRef>();
 
-        static string vAlias;
+        static string vAlias = "sha256"
 
         static void Main(string[] args)
         {
