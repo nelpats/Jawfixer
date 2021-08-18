@@ -2,12 +2,8 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Net;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 
 namespace Jawfixer
 {
@@ -56,11 +52,11 @@ namespace Jawfixer
             unpack();
 
             urlContent = baseContent.Split(',')[0].Replace('"'.ToString(), string.Empty);
-            urlContent = urlContent.Substring(17, urlContent.Length - 17);
+            urlContent = urlContent.Substring(13 + vAlias.Length, urlContent.Length - (13 + vAlias.Length));
 
             log($"found base url '{urlContent}'");
-            log("downloading original code");
 
+            log("downloading original code");
             finalContent = new WebClient().DownloadString(urlContent);
 
             log("saving original code");
@@ -77,7 +73,7 @@ namespace Jawfixer
             collectMethods();
             getVulnerableAlias();
 
-            if (vAlias.Length == 4)
+            if (vAlias.Length >= 4)
                 log($"found vulnerable alias '{vAlias}'");
 
             baseContent = getOutput().Replace('b' + '"'.ToString(), string.Empty).Replace('"'.ToString(), string.Empty);
@@ -116,9 +112,12 @@ namespace Jawfixer
             refs.Clear();
 
             for (int i = 0; i < content.Length; i++)
-            {           
-                if (Regex.IsMatch(content[i], "[a-zA-Z-0-9] = [a-zA-Z]"))
-                    refs.Add(new methodRef(content[i], i));                 
+            { 
+                if (Regex.IsMatch(content[i], "[a-zA-Z-0-9]=[a-zA-Z]"))
+                {
+                    refs.Add(new methodRef(content[i], i));
+                }
+              
             }
         }
 
