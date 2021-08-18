@@ -1,0 +1,187 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Net;
+using System.Text.RegularExpressions;
+
+namespace Jawfixer
+{
+    class Program
+    {
+        static string baseContent;
+
+        static string rawContent;
+
+        static string urlContent;
+
+        static string finalContent;
+
+        static string[] content;
+
+        static List<methodRef> refs = new List<methodRef>();
+
+        static string vAlias = "sha256";
+
+        static void Main(string[] args)
+        {
+            Console.Title = "Jawfixer | github.com/NSDCode";
+
+            if (args.Length < 1)
+                end("invalid argument");
+
+            if (!args[0].EndsWith(".py"))
+                end("invalid file extension");
+
+            content = File.ReadAllLines(args[0]);
+            baseContent = File.ReadAllText(args[0]);
+
+            log("importing file");
+
+
+            log($"file name is '{Path.GetFileName(args[0])}'");
+
+            log("press any key to start unpacking process");
+
+            Console.ReadKey();
+
+            log("unpacking first encoded code");
+            unpack();
+
+            log("unpacking second encoded code");
+            unpack();
+
+            urlContent = baseContent.Split(',')[0].Replace('"'.ToString(), string.Empty);
+
+            if (urlContent.Length < 17)
+                end("something went wrong");
+
+            urlContent = urlContent.Substring(13 + vAlias.Length, urlContent.Length - (13 + vAlias.Length));
+
+            log($"found base url '{urlContent}'");
+
+            log("downloading original code");
+            finalContent = new WebClient().DownloadString(urlContent);
+
+            log("saving original code");
+            File.WriteAllText("unpacked.py", finalContent);
+
+            end("unpacking process is done");
+        }
+
+        static void unpack()
+        {
+            if (baseContent.Contains(";"))
+                beautify();
+
+            collectMethods();
+
+            if (vAlias.Length == 0)
+                end("unabled to find vulnerable alias");
+
+            getVulnerableAlias();
+
+            
+
+            baseContent = getOutput().Replace('b' + '"'.ToString(), string.Empty).Replace('"'.ToString(), string.Empty);
+        }
+        static void beautify()
+        {
+            baseContent = baseContent.Replace(";", "\n");
+
+            content = baseContent.Split('\n');
+        }
+
+        static string getOutput()
+        {
+            File.WriteAllText("temp.py", rawContent);
+
+            ProcessStartInfo pInfos = new ProcessStartInfo();
+
+            pInfos.RedirectStandardOutput = true;
+            pInfos.UseShellExecute = false;
+
+            pInfos.CreateNoWindow = true;
+            pInfos.FileName = "cmd.exe";
+            pInfos.Arguments = "/C py temp.py";
+
+            Process process = new Process();
+
+            process.StartInfo = pInfos;
+            process.Start();
+
+            return process.StandardOutput.ReadToEnd();
+        }
+
+
+        static void collectMethods()
+        {
+            refs.Clear();
+
+            for (int i = 0; i < content.Length; i++)
+            { 
+                if (Regex.IsMatch(content[i], "[a-zA-Z-0-9]=[a-zA-Z]"))
+                {
+                    refs.Add(new methodRef(content[i], i));
+                }
+                else
+                {
+                    if (Regex.IsMatch(content[i], "[a-zA-Z-0-9] = [a-zA-Z]"))
+                        refs.Add(new methodRef(content[i], i));
+                }
+              
+            }
+        }
+
+        static void getVulnerableAlias()
+        {
+            foreach (methodRef mRef in refs)
+            {
+                if (mRef.methodName.Trim() == "exec")
+                {
+
+
+                    vAlias = mRef.alias.Trim();
+
+                    log($"found vulnerable alias '{vAlias}'");
+                    log("exploiting vulnerable alias");
+
+                    content[mRef.line] = $"{vAlias} = print";
+
+                    rawContent = string.Join(Environment.NewLine, content);
+                }
+
+            }
+
+            if (vAlias.Length == 0)
+                end("unable to find vulnerable alias");
+
+
+
+        }
+
+        static void log(string input)
+        {
+            Console.Write("[");
+
+            Console.ForegroundColor = ConsoleColor.Blue;
+            Console.Write("JAWFIXER");
+
+            Console.ForegroundColor = ConsoleColor.White;
+            Console.Write("] ");
+
+            Console.WriteLine(input);
+        }
+
+        static void end(string input)
+        {
+            log(input);
+
+            Console.WriteLine("press any key to exit...");
+            Console.ReadKey();
+
+            Environment.Exit(0);
+
+        }
+    }
+}
