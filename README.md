@@ -5,6 +5,7 @@
 
 ### original link: https://github.com/billythegoat356/Jawbreaker
 
+#### (Support latest version)
 ### usage:
 ```
 Jawfixer.exe <path>
